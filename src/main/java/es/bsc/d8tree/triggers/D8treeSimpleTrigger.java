@@ -1,5 +1,6 @@
 package es.bsc.d8tree.triggers;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.cassandra.config.CFMetaData;
 import org.apache.cassandra.db.ClusteringComparator;
 import org.apache.cassandra.db.DecoratedKey;
@@ -22,23 +23,24 @@ import java.util.Collections;
 public class D8treeSimpleTrigger implements ITrigger {
     private static final int TREE_HEIGHT = Integer.getInteger("loop_tree.height", 10);
 
+    private static final Collection<Mutation> emptyReturn=ImmutableList.of();
     private final static Logger log = LoggerFactory.getLogger(D8treeSimpleTrigger.class);
 
     public Collection<Mutation> augment(Partition partition) {
         log.debug("Partition is of {} type", partition.getClass().getSimpleName());
         final String cf = partition.metadata().cfName;
         if (partition.isEmpty()) {
-            return null;
+            return emptyReturn;
         }
         if (!cf.matches(".*_d8tree$")) {
             log.warn("D8treeSimpleTrigger called on the wrong table: {}", cf);
-            return null;
+            return emptyReturn;
         }
         try {
             String key = ByteBufferUtil.string(partition.partitionKey().getKey());
             if (key.length() < TREE_HEIGHT) {
                 log.debug("Not leaf insertions, let's ignore it.");
-                return null;
+                return emptyReturn;
             } else {
                 ArrayList<Mutation> mutations = new ArrayList<>();
                 if (partition instanceof PartitionUpdate) {
@@ -59,7 +61,7 @@ public class D8treeSimpleTrigger implements ITrigger {
 
         } catch (CharacterCodingException e) {
             log.warn("Wrong partition key size");
-            return null;
+            return emptyReturn;
         }
     }
 }
