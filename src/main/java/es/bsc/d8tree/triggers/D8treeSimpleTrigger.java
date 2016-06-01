@@ -45,7 +45,14 @@ public class D8treeSimpleTrigger implements ITrigger {
                 ArrayList<Mutation> mutations = new ArrayList<>();
                 if (partition instanceof PartitionUpdate) {
                     PartitionUpdate pu = (PartitionUpdate) partition;
+                    /**
+                     * This is the new for creating the higher cube "_"
+                     */
                     ClusteringComparator comparator = pu.metadata().getKeyValidatorAsClusteringComparator();
+                    DecoratedKey dkey = pu.metadata().partitioner.decorateKey(CFMetaData.serializePartitionKey(comparator.make("_")));
+                    PartitionUpdate rows_ = new PartitionUpdate(pu.metadata(), dkey, pu.columns(), pu.operationCount());
+                    pu.iterator().forEachRemaining(rows_::add);
+                    mutations.add(new Mutation(rows_));
                     for (int i = 1; i < key.length(); i++) {
                         DecoratedKey dk = pu.metadata().partitioner.decorateKey(CFMetaData.serializePartitionKey(comparator.make(key.substring(0, i))));
                         PartitionUpdate rows = new PartitionUpdate(pu.metadata(), dk, pu.columns(), pu.operationCount());
